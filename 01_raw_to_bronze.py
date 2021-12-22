@@ -1,4 +1,9 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC #Raw to Bronze Pattern
+
+# COMMAND ----------
+
 # MAGIC %run ./includes/configuration
 
 # COMMAND ----------
@@ -25,6 +30,7 @@ rawDF = (spark
 # COMMAND ----------
 
 from pyspark.sql.types import StringType
+from pyspark.sql.functions import *
 
 raw_movie_DF = rawDF.select(explode("movie").alias("value"))
 display(raw_movie_DF)
@@ -86,5 +92,5 @@ location "{bronzePath}"
 
 # COMMAND ----------
 
-#Purge Raw File Path
-dbutils.fs.rm(rawPath, recurse=True)
+# MAGIC %sql
+# MAGIC SELECT * FROM movie_bronze where value RLIKE 'Deadpool'
