@@ -94,10 +94,5 @@ movieDF = (ms_DF
 
 # COMMAND ----------
 
-#Display movie dataframe
-display(movieDF)
-
-# COMMAND ----------
-
 # Testing
 # movie_id.withColumn("movie", explode(arrays_zip("Id"))).select("movie.Id").show()

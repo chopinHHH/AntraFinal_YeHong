@@ -23,6 +23,7 @@ rawDF = (spark
             .read
             .format("json")
             .option("multiline", "true")
+            .option("inferSchema", "true")
             .load(rawData)
             .cache()
            )
@@ -32,19 +33,15 @@ rawDF = (spark
 from pyspark.sql.types import StringType
 from pyspark.sql.functions import *
 
-raw_movie_DF = rawDF.select(explode("movie").alias("value"))
+raw_movie_DF = rawDF.select(explode("movie").alias("movie"))
 display(raw_movie_DF)
-
-# COMMAND ----------
-
-# testDF = rawDF.selectExpr("explode(movie) AS movie").selectExpr("movie.*")
 
 # COMMAND ----------
 
 # Ingestion Metadata
 from pyspark.sql.functions import current_timestamp, lit
 raw_movie_data_df = (raw_movie_DF
-                     .select("value",
+                     .select("movie",
                              lit("files.training.databricks.com").alias("datasource"),
                              current_timestamp().alias("ingesttime"),
                              lit("new").alias("status"),
@@ -54,12 +51,15 @@ raw_movie_data_df = (raw_movie_DF
 
 # COMMAND ----------
 
-# WRITE Batch to a Bronze Table
+# testDF = rawDF.selectExpr("explode(movie) AS movie").selectExpr("movie.*")
 
+# COMMAND ----------
+
+# WRITE Batch to a Bronze Table
 from pyspark.sql.functions import col
 (raw_movie_data_df.select("datasource",
                           "ingesttime",
-                          "value",
+                          "movie",
                           "status",
                           col("ingestdate").alias("p_ingestdate"))
  .write.format("delta")
@@ -89,8 +89,3 @@ location "{bronzePath}"
 
 # MAGIC %sql
 # MAGIC SELECT * FROM movie_bronze
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC SELECT * FROM movie_bronze where value RLIKE 'Deadpool'

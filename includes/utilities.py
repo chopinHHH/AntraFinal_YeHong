@@ -38,7 +38,7 @@ def batch_writer(
 ) -> DataFrame:
     return (dataframe.select("datasource",
                              "ingesttime",
-                             "value",
+                             "movie",
                              "status",
                              col("ingestdate").alias("p_ingestdate"))
             .write.format("delta")
@@ -54,8 +54,8 @@ def read_batch_raw(rawPath: str) -> DataFrame:
 # COMMAND ----------
 
 def transform_raw(raw: DataFrame) -> DataFrame:
-    raw_movie_DF = rawDF.select(explode("movie").alias("value"))
-    return raw_movie_DF.select("value",
+    raw_movie_DF = rawDF.select(explode("movie").alias("movie"))
+    return raw_movie_DF.select("movie",
                                lit("files.training.databricks.com").alias("datasource"),
                                current_timestamp().alias("ingesttime"),
                                lit("new").alias("status"),
