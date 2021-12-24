@@ -7,6 +7,16 @@
 
 # COMMAND ----------
 
+rawDF = ingest_batch_raw(rawData)
+raw_movie_DF = rawDF.select(explode("movie").alias("movie"))
+transformedRawDF = transform_raw(raw_movie_DF)
+rawToBronzeWriter = batch_writer(dataframe=transformedRawDF, partition_column="p_ingestdate")
+bronzeDF = spark.read.table("movie_Bronze").filter("status = 'loaded'")
+silver_master_tracker = bronze_to_silver(bronzeDF)
+silver_master_tracker_clean = silver_master_tracker.filter("runtime >= 0")                            
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ### Create Movie Silver Table
 
@@ -61,14 +71,23 @@ dbutils.fs.rm("genresPath", recurse=True)
 
 # COMMAND ----------
 
-# Prepare Genres Data (in 02_bronze_to_silver)
-# genres_SDF = silver_master_tracker_clean.select(explode("movie.genres.id").alias("genres"))
+# Prepare Genres Data
+genres_SDF = silver_master_tracker_clean.select(explode("movie.genres").alias("genres"))
 
 # COMMAND ----------
 
-(genres_SDF.select("id","name")
+from pyspark.sql.functions import trim
+
+genres_tmp = genres_SDF.select("genres.id", "genres.name")
+genres_new = genres_tmp.select("id", trim(col("name")).alias("name")).where("name!=''").dropna(how="any").dropDuplicates().sort("id")
+display(genres_new)
+
+# COMMAND ----------
+
+(genres_new.select("id","name")
     .write.format("delta")
-    .mode("append")
+    .mode("overwrite")
+    .option("overwriteSchema","true")
     .save(genresPath))
 
 # COMMAND ----------
@@ -131,4 +150,4 @@ LOCATION "{originalLanguagePath}"
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC select distinct(*) from originalLanguage_silver
+# MAGIC select * from originalLanguage_silver

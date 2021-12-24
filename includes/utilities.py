@@ -62,4 +62,8 @@ def transform_raw(raw: DataFrame) -> DataFrame:
 
 # COMMAND ----------
 
-
+def bronze_to_silver(df: DataFrame) -> DataFrame:
+    return (df
+                         .select("movie",
+                                 "*"
+                                ))
