@@ -63,7 +63,24 @@ def transform_raw(raw: DataFrame) -> DataFrame:
 # COMMAND ----------
 
 def bronze_to_silver(df: DataFrame) -> DataFrame:
-    return (df
-                         .select("movie",
-                                 "*"
-                                ))
+    return (df.select("movie",
+                     col("movie.BackdropUrl"), 
+                     col("movie.Budget"), 
+                     col("movie.CreatedBy"), 
+                     col("movie.CreatedDate").cast("date").alias("CreatedDate"), 
+                     col("movie.Id"), 
+                     col("movie.ImdbUrl"), 
+                     col("movie.OriginalLanguage"), 
+                     col("movie.Overview"), 
+                     col("movie.PosterUrl"), 
+                     col("movie.Price"), 
+                     col("movie.ReleaseDate"), 
+                     col("movie.Revenue"), 
+                     col("movie.RunTime"), 
+                     col("movie.Tagline"), 
+                     col("movie.Title"), 
+                     col("movie.TmdbUrl"), 
+                     col("movie.UpdatedBy"), 
+                     col("movie.UpdatedDate").cast("date").alias("UpdatedDate"), 
+                     col("movie.genres")
+                     ))

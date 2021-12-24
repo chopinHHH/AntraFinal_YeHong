@@ -13,7 +13,7 @@ transformedRawDF = transform_raw(raw_movie_DF)
 rawToBronzeWriter = batch_writer(dataframe=transformedRawDF, partition_column="p_ingestdate")
 bronzeDF = spark.read.table("movie_Bronze").filter("status = 'loaded'")
 silver_master_tracker = bronze_to_silver(bronzeDF)
-silver_master_tracker_clean = silver_master_tracker.filter("runtime >= 0")                            
+silver_master_clean = silver_master_tracker.filter("runtime >= 0")
 
 # COMMAND ----------
 
@@ -72,7 +72,7 @@ dbutils.fs.rm("genresPath", recurse=True)
 # COMMAND ----------
 
 # Prepare Genres Data
-genres_SDF = silver_master_tracker_clean.select(explode("movie.genres").alias("genres"))
+genres_SDF = silver_master_clean.select(explode("movie.genres").alias("genres"))
 
 # COMMAND ----------
 
@@ -86,8 +86,7 @@ display(genres_new)
 
 (genres_new.select("id","name")
     .write.format("delta")
-    .mode("overwrite")
-    .option("overwriteSchema","true")
+    .mode("append")
     .save(genresPath))
 
 # COMMAND ----------
@@ -126,9 +125,9 @@ ol_SDF = sqlContext.sql("Select OriginalLanguage from master_silver")
 
 # COMMAND ----------
 
-(ol_SDF.select("OriginalLanguage").distinct()
+(ol_SDF.select(col("OriginalLanguage").alias("code"), lit("English").alias("name")).distinct()
     .write.format("delta")
-    .mode("append")
+    .mode("overwrite").option("overwriteSchema", "true")
     .save(originalLanguagePath))
 
 # COMMAND ----------

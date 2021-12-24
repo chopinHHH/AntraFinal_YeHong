@@ -178,28 +178,6 @@ display(silver_master_tracker_quarantine)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Create Genres Silver Table
-
-# COMMAND ----------
-
-dbutils.fs.rm("genresPath", recurse=True)
-
-# COMMAND ----------
-
-# Prepare Genres Data
-genres_SDF = silver_master_tracker_clean.select(explode("movie.genres").alias("genres"))
-display(genres_SDF)
-
-# COMMAND ----------
-
-(genres_SDF.select(col("genres.id").cast("integer").alias("id"),col("genres.name"))
-    .write.format("delta")
-    .mode("append")
-    .save(genresPath))
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ### WRITE Clean Batch to a Silver Table
 
 # COMMAND ----------
