@@ -28,12 +28,13 @@ dbutils.fs.rm(bronzePath, recurse=True)
 # COMMAND ----------
 
 # Step 1: Creat RawDF DataFrame
-rawDF = read_batch_raw(rawPath)
+rawDF = ingest_batch_raw(rawData)
 
 # COMMAND ----------
 
 # Step 2: Transform the Raw Data
-transformedRawDF = transform_raw(rawDF)
+raw_movie_DF = rawDF.select(explode("movie").alias("movie"))
+transformedRawDF = transform_raw(raw_movie_DF)
 
 # COMMAND ----------
 
@@ -173,6 +174,28 @@ silver_master_tracker_quarantine = silver_master_tracker.filter("runtime < 0")
 
 # Display the Quarantined Records
 display(silver_master_tracker_quarantine)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Create Genres Silver Table
+
+# COMMAND ----------
+
+dbutils.fs.rm("genresPath", recurse=True)
+
+# COMMAND ----------
+
+# Prepare Genres Data
+genres_SDF = silver_master_tracker_clean.select(explode("movie.genres").alias("genres"))
+display(genres_SDF)
+
+# COMMAND ----------
+
+(genres_SDF.select(col("genres.id").cast("integer").alias("id"),col("genres.name"))
+    .write.format("delta")
+    .mode("append")
+    .save(genresPath))
 
 # COMMAND ----------
 

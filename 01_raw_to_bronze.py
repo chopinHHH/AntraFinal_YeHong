@@ -8,6 +8,10 @@
 
 # COMMAND ----------
 
+# MAGIC %run ./includes/utilities
+
+# COMMAND ----------
+
 # Display the Files in the Raw Path
 display(dbutils.fs.ls(rawPath))
 
@@ -19,14 +23,7 @@ dbutils.fs.rm(bronzePath, recurse=True)
 # COMMAND ----------
 
 # Ingest raw data
-rawDF = (spark
-            .read
-            .format("json")
-            .option("multiline", "true")
-            .option("inferSchema", "true")
-            .load(rawData)
-            .cache()
-           )
+rawDF = ingest_batch_raw(rawData).cache()
 
 # COMMAND ----------
 
@@ -51,7 +48,8 @@ raw_movie_data_df = (raw_movie_DF
 
 # COMMAND ----------
 
-# testDF = rawDF.selectExpr("explode(movie) AS movie").selectExpr("movie.*")
+testDF = rawDF.selectExpr("explode(movie) AS movie").selectExpr("movie.*")
+display(testDF)
 
 # COMMAND ----------
 

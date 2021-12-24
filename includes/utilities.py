@@ -30,34 +30,36 @@ from pyspark.sql.types import StringType
 
 # COMMAND ----------
 
+def ingest_batch_raw(Path: str) -> DataFrame:
+    return spark.read.format("json").option("multiline", "true").option("inferSchema", "true").load(Path)
+
+# COMMAND ----------
+
 def batch_writer(
     dataframe: DataFrame,
     partition_column: str,
     exclude_columns: List = [],
     mode: str = "append",
 ) -> DataFrame:
-    return (dataframe.select("datasource",
-                             "ingesttime",
-                             "movie",
-                             "status",
-                             col("ingestdate").alias("p_ingestdate"))
-            .write.format("delta")
-            .mode(mode)
-            .partitionBy("p_ingestdate")
-)
-
-# COMMAND ----------
-
-def read_batch_raw(rawPath: str) -> DataFrame:
-    return spark.read.format("json").option("multiline", "true").load(rawData)
+    return (
+        dataframe.drop(
+            *exclude_columns
+        )  # This uses Python argument unpacking (https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists)
+        .write.format("delta")
+        .mode(mode)
+        .partitionBy(partition_column)
+    )
 
 # COMMAND ----------
 
 def transform_raw(raw: DataFrame) -> DataFrame:
-    raw_movie_DF = rawDF.select(explode("movie").alias("movie"))
-    return raw_movie_DF.select("movie",
-                               lit("files.training.databricks.com").alias("datasource"),
-                               current_timestamp().alias("ingesttime"),
-                               lit("new").alias("status"),
-                               current_timestamp().cast("date").alias("ingestdate")
-                              )
+    return raw.select("movie",
+                      lit("movieShop.databricks.com").alias("datasource"),
+                      current_timestamp().alias("ingesttime"),
+                      lit("new").alias("status"),
+                      current_timestamp().cast("date").alias("p_ingestdate")
+                     )
+
+# COMMAND ----------
+
+
