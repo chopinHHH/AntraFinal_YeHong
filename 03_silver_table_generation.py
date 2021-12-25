@@ -35,7 +35,8 @@ movie_SDF = sqlContext.sql("Select Id, Title, Overview, Tagline, RunTime, Releas
 
 (movie_SDF.select("Id", "Title", "Overview", "Tagline", "RunTime", "ReleaseDate", "CreatedBy", "CreatedDate", "Price", "Revenue", "Budget", "BackdropUrl", "ImdbUrl", "PosterUrl", "TmdbUrl", "UpdatedBy", "UpdatedDate", "OriginalLanguage")
     .write.format("delta")
-    .mode("append")
+    .mode("overwrite")
+    .option("overwriteSchema", "true")
     .save(moviePath))
 # if A Schema mismatch detected, can use [.mode("overwrite").option("overwriteSchema", "true")] to overwrite the delta table 
 
@@ -84,10 +85,7 @@ display(genres_new)
 
 # COMMAND ----------
 
-(genres_new.select("id","name")
-    .write.format("delta")
-    .mode("append")
-    .save(genresPath))
+(genres_new.select("id","name").write.format("delta").mode("overwrite").option("overwriteSchema", "true").save(genresPath))
 
 # COMMAND ----------
 
@@ -127,7 +125,8 @@ ol_SDF = sqlContext.sql("Select OriginalLanguage from master_silver")
 
 (ol_SDF.select(col("OriginalLanguage").alias("code"), lit("English").alias("name")).distinct()
     .write.format("delta")
-    .mode("append")
+    .mode("overwrite")
+    .option("overwriteSchema", "true")
     .save(originalLanguagePath))
 
 # COMMAND ----------

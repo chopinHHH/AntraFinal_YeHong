@@ -25,10 +25,13 @@ rawToBronzeWriter.save(bronzePath)
 
 # COMMAND ----------
 
-bronzeDF = (spark.read.table("movie_bronze").filter("status = 'new'")
-)
+bronzeDF = (spark.read.table("movie_bronze").filter("status = 'loaded'"))
 silver_master_tracker = bronze_to_silver(bronzeDF)
 (silver_master_clean, silver_master_quarantine) = generate_clean_and_quarantine_dataframes(silver_master_tracker)
+
+# COMMAND ----------
+
+silver_master_clean.count()
 
 # COMMAND ----------
 

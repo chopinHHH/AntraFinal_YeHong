@@ -35,6 +35,16 @@ def ingest_batch_raw(Path: str) -> DataFrame:
 
 # COMMAND ----------
 
+def transform_raw(raw: DataFrame) -> DataFrame:
+    return raw.select("movie",
+                      lit("movieShop.databricks.com").alias("datasource"),
+                      current_timestamp().alias("ingesttime"),
+                      lit("new").alias("status"),
+                      current_timestamp().cast("date").alias("p_ingestdate")
+                     )
+
+# COMMAND ----------
+
 def batch_writer(
     dataframe: DataFrame,
     partition_column: str,
@@ -52,16 +62,6 @@ def batch_writer(
 
 # COMMAND ----------
 
-def transform_raw(raw: DataFrame) -> DataFrame:
-    return raw.select("movie",
-                      lit("movieShop.databricks.com").alias("datasource"),
-                      current_timestamp().alias("ingesttime"),
-                      lit("new").alias("status"),
-                      current_timestamp().cast("date").alias("p_ingestdate")
-                     )
-
-# COMMAND ----------
-
 def read_batch_bronze(spark: SparkSession) -> DataFrame:
     return spark.read.table("movie_Bronze").filter("status = 'loaded'")
 
@@ -72,10 +72,10 @@ def transform_bronze(bronze: DataFrame, quarantine: bool = False) -> DataFrame:
     silver_master_tracker = bronze_to_silver(bronze)
 
     if not quarantine:
-        silver_master_tracker = silver_master_tracker.filter("runtime >= 0")
+        silver_master_tracker = silver_master_tracker.filter(("runtime >= 0") and ("budget >= 1000000"))
     
     else:
-        silver_master_tracker = silver_master_tracker.filter("runtime < 0")
+        silver_master_tracker = silver_master_tracker.filter(("budget < 1000000") or ("runtime < 0"))
 
     return silver_master_tracker
 

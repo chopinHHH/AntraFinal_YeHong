@@ -48,8 +48,8 @@ raw_movie_data_df = (raw_movie_DF
 
 # COMMAND ----------
 
-testDF = rawDF.selectExpr("explode(movie) AS movie").selectExpr("movie.*")
-display(testDF)
+#testDF = rawDF.selectExpr("explode(movie) AS movie").selectExpr("movie.*")
+#display(testDF)
 
 # COMMAND ----------
 
