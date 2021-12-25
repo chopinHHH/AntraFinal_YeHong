@@ -12,7 +12,7 @@ raw_movie_DF = rawDF.select(explode("movie").alias("movie"))
 transformedRawDF = transform_raw(raw_movie_DF)
 rawToBronzeWriter = batch_writer(dataframe=transformedRawDF, partition_column="p_ingestdate")
 bronzeDF = spark.read.table("movie_Bronze").filter("status = 'loaded'")
-silver_master_tracker = bronze_to_silver(bronzeDF)
+silver_master_tracker = transform_bronze(bronzeDF)
 silver_master_clean = silver_master_tracker.filter(("runtime >= 0") and ("budget >= 1000000"))
 
 # COMMAND ----------
@@ -149,3 +149,46 @@ LOCATION "{originalLanguagePath}"
 
 # MAGIC %sql
 # MAGIC select * from originalLanguage_silver
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Create Movie_Genres as Junction Table
+
+# COMMAND ----------
+
+movieGenresDF = silver_master_clean.select("id", col("genres.id").alias("gid"), col("genres.name").alias("gname"))
+
+# COMMAND ----------
+
+movie_genres = movieGenresDF.withColumnRenamed("id", "movie_id").withColumn("genres_id", explode(movieGenresDF.gid))
+display(movie_genres)
+
+# COMMAND ----------
+
+(movie_genres.select("movie_id", "genres_id").distinct()
+    .write.format("delta")
+    .mode("append")
+    .save(movie_genres_Path))
+
+# COMMAND ----------
+
+spark.sql(
+    """
+DROP TABLE IF EXISTS movieGenres_silver
+"""
+)
+
+spark.sql(
+    f"""
+CREATE TABLE movieGenres_silver
+USING DELTA
+LOCATION "{movie_genres_Path}"
+"""
+)
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from movieGenres_silver
+# MAGIC order by 1,2
