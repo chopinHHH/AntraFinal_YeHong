@@ -98,8 +98,7 @@ display(silverCleanedDF_1)
 # COMMAND ----------
 
 # Step 4: Fix budget with 1000000 if original value is less than 1000000
-silverCleanedDF = silverCleanedDF_1.withColumn("Budget", when(col("Budget") < 1000000, 1000000)
-                           .when(col("Budget") >= 1000000, "Budget").otherwise(1000000))
+silverCleanedDF = silverCleanedDF_1.withColumn("Budget", when(col("Budget") < 1000000, 1000000).when(col("Budget") >= 1000000, "Budget").otherwise(1000000))
 
 # COMMAND ----------
 
