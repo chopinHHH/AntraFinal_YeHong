@@ -13,7 +13,7 @@ transformedRawDF = transform_raw(raw_movie_DF)
 rawToBronzeWriter = batch_writer(dataframe=transformedRawDF, partition_column="p_ingestdate")
 bronzeDF = spark.read.table("movie_Bronze").filter("status = 'loaded'")
 silver_master_tracker = bronze_to_silver(bronzeDF)
-silver_master_clean = silver_master_tracker.filter("runtime >= 0")
+silver_master_clean = silver_master_tracker.filter(("runtime >= 0") and ("budget >= 1000000"))
 
 # COMMAND ----------
 
@@ -127,7 +127,7 @@ ol_SDF = sqlContext.sql("Select OriginalLanguage from master_silver")
 
 (ol_SDF.select(col("OriginalLanguage").alias("code"), lit("English").alias("name")).distinct()
     .write.format("delta")
-    .mode("overwrite").option("overwriteSchema", "true")
+    .mode("append")
     .save(originalLanguagePath))
 
 # COMMAND ----------

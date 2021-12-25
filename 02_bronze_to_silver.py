@@ -167,8 +167,8 @@ silver_master_tracker.dropna(how="all").count()
 # COMMAND ----------
 
 # Split the Silver DataFrame
-silver_master_tracker_clean = silver_master_tracker.filter("runtime >= 0")
-silver_master_tracker_quarantine = silver_master_tracker.filter("runtime < 0")
+silver_master_tracker_clean = silver_master_tracker.filter(("runtime >= 0") and ("budget >= 1000000"))
+silver_master_tracker_quarantine = silver_master_tracker.filter(("budget < 1000000") or ("runtime < 0"))
 
 # COMMAND ----------
 

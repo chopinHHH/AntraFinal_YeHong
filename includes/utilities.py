@@ -62,6 +62,25 @@ def transform_raw(raw: DataFrame) -> DataFrame:
 
 # COMMAND ----------
 
+def read_batch_bronze(spark: SparkSession) -> DataFrame:
+    return spark.read.table("movie_Bronze").filter("status = 'loaded'")
+
+# COMMAND ----------
+
+def transform_bronze(bronze: DataFrame, quarantine: bool = False) -> DataFrame:
+
+    silver_master_tracker = bronze_to_silver(bronze)
+
+    if not quarantine:
+        silver_master_tracker = silver_master_tracker.filter("runtime >= 0")
+    
+    else:
+        silver_master_tracker = silver_master_tracker.filter("runtime < 0")
+
+    return silver_master_tracker
+
+# COMMAND ----------
+
 def bronze_to_silver(df: DataFrame) -> DataFrame:
     return (df.select("movie",
                      col("movie.BackdropUrl"), 
@@ -84,3 +103,32 @@ def bronze_to_silver(df: DataFrame) -> DataFrame:
                      col("movie.UpdatedDate").cast("date").alias("UpdatedDate"), 
                      col("movie.genres")
                      ))
+
+# COMMAND ----------
+
+def generate_clean_and_quarantine_dataframes(
+    dataframe: DataFrame,
+) -> (DataFrame, DataFrame):
+    return (
+        dataframe.filter("runtime >= 0"),
+        dataframe.filter("runtime < 0"),
+    )
+
+# COMMAND ----------
+
+def update_bronze_table_status(
+    spark: SparkSession, bronzeTablePath: str, dataframe: DataFrame, status: str
+) -> bool:
+    
+    bronzeTable = DeltaTable.forPath(spark, bronzePath)
+    silverAugmented = dataframe.withColumn("status", lit(status)).dropDuplicates()
+    
+    update_match = "bronze.movie = dataframe.movie"
+    update = {"status": "dataframe.status"}
+    (
+        bronzeTable.alias("bronze")
+        .merge(silverAugmented.alias("dataframe"), update_match)
+        .whenMatchedUpdate(set=update)
+        .execute()
+    )
+    return True
