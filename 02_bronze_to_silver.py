@@ -38,10 +38,6 @@ transformedRawDF = transform_raw(raw_movie_DF)
 
 # COMMAND ----------
 
-transformedRawDF.printSchema()
-
-# COMMAND ----------
-
 # Verify the Schema with an Assertion
 """
 from pyspark.sql.types import *
