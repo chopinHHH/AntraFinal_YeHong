@@ -49,7 +49,7 @@ def batch_writer(
     dataframe: DataFrame,
     partition_column: str,
     exclude_columns: List = [],
-    mode: str = "append",
+    mode: str = "overwrite",
 ) -> DataFrame:
     return (
         dataframe.drop(
@@ -57,61 +57,49 @@ def batch_writer(
         )  # This uses Python argument unpacking (https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists)
         .write.format("delta")
         .mode(mode)
+        .option("overwriteSchema", "true")
         .partitionBy(partition_column)
     )
 
 # COMMAND ----------
 
 def read_batch_bronze(spark: SparkSession) -> DataFrame:
-    return spark.read.table("movie_Bronze").filter("status = 'loaded'")
+    return spark.read.table("movie_Bronze").filter("status = 'new'")
 
 # COMMAND ----------
 
-def transform_bronze(bronze: DataFrame, quarantine: bool = False) -> DataFrame:
-
-    silver_master_tracker = bronze_to_silver(bronze)
-
-    if not quarantine:
-        silver_master_tracker = silver_master_tracker.filter(("runtime >= 0") and ("budget >= 1000000"))
+def transform_bronze(bronze: DataFrame) -> DataFrame:
     
-    else:
-        silver_master_tracker = silver_master_tracker.filter(("budget < 1000000") or ("runtime < 0"))
-
+    silver_master_tracker = (bronze
+                             .select("movie",
+                                 col("movie.BackdropUrl"), 
+                                 col("movie.Budget"), 
+                                 col("movie.CreatedBy"), 
+                                 col("movie.CreatedDate").cast("date").alias("CreatedDate"), 
+                                 col("movie.Id"), 
+                                 col("movie.ImdbUrl"), 
+                                 col("movie.OriginalLanguage"), 
+                                 col("movie.Overview"), 
+                                 col("movie.PosterUrl"), 
+                                 col("movie.Price"), 
+                                 col("movie.ReleaseDate"), 
+                                 col("movie.Revenue"), 
+                                 col("movie.RunTime"), 
+                                 col("movie.Tagline"), 
+                                 col("movie.Title"), 
+                                 col("movie.TmdbUrl"), 
+                                 col("movie.UpdatedBy"), 
+                                 col("movie.UpdatedDate").cast("date").alias("UpdatedDate"), 
+                                 col("movie.genres")
+                                    ))
     return silver_master_tracker
 
 # COMMAND ----------
 
-def bronze_to_silver(df: DataFrame) -> DataFrame:
-    return (df.select("movie",
-                     col("movie.BackdropUrl"), 
-                     col("movie.Budget"), 
-                     col("movie.CreatedBy"), 
-                     col("movie.CreatedDate").cast("date").alias("CreatedDate"), 
-                     col("movie.Id"), 
-                     col("movie.ImdbUrl"), 
-                     col("movie.OriginalLanguage"), 
-                     col("movie.Overview"), 
-                     col("movie.PosterUrl"), 
-                     col("movie.Price"), 
-                     col("movie.ReleaseDate"), 
-                     col("movie.Revenue"), 
-                     col("movie.RunTime"), 
-                     col("movie.Tagline"), 
-                     col("movie.Title"), 
-                     col("movie.TmdbUrl"), 
-                     col("movie.UpdatedBy"), 
-                     col("movie.UpdatedDate").cast("date").alias("UpdatedDate"), 
-                     col("movie.genres")
-                     ))
-
-# COMMAND ----------
-
-def generate_clean_and_quarantine_dataframes(
-    dataframe: DataFrame,
-) -> (DataFrame, DataFrame):
+def generate_clean_and_quarantine_dataframes(dataframe: DataFrame) -> (DataFrame, DataFrame):
     return (
-        dataframe.filter("runtime >= 0"),
-        dataframe.filter("runtime < 0"),
+        dataframe.filter("runtime >= 0" and "budget >= 1000000"),
+        dataframe.filter("budget < 1000000" or "runtime < 0")
     )
 
 # COMMAND ----------

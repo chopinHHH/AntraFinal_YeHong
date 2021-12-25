@@ -25,26 +25,19 @@ rawToBronzeWriter.save(bronzePath)
 
 # COMMAND ----------
 
-bronzeDF = (spark.read.table("movie_bronze").filter("status = 'loaded'"))
-silver_master_tracker = bronze_to_silver(bronzeDF)
-(silver_master_clean, silver_master_quarantine) = generate_clean_and_quarantine_dataframes(silver_master_tracker)
+bronzeDF = read_batch_bronze(spark)
+silver_master_tracker = transform_bronze(bronzeDF)
+(silverCleanDF, silverQuarantineDF) = generate_clean_and_quarantine_dataframes(silver_master_tracker)
 
 # COMMAND ----------
 
-silver_master_clean.count()
+bronzeToSilverWriter = batch_writer(dataframe=silverCleanDF, partition_column="UpdatedDate")
+bronzeToSilverWriter.save(silverPath)
 
 # COMMAND ----------
 
-bronzeToSilverWriter = batch_writer(
-    dataframe=transformedRawDF, partition_column="p_ingestdate"
-)
-(silver_master_clean.select("BackdropUrl", "Budget", "CreatedBy", "CreatedDate", "Id", "ImdbUrl", "OriginalLanguage", "Overview", "PosterUrl", "Price", "ReleaseDate", "Revenue", "RunTime", "Tagline", "Title", "TmdbUrl", "UpdatedBy", "UpdatedDate", "genres")
-    .write.format("delta")
-    .mode("append")
-    .save(silverPath))
-
-update_bronze_table_status(spark, bronzePath, silver_master_clean, "loaded")
-update_bronze_table_status(spark, bronzePath, silver_master_quarantine, "quarantined")
+update_bronze_table_status(spark, bronzePath, silverCleanDF, "loaded")
+update_bronze_table_status(spark, bronzePath, silverQuarantineDF, "quarantined")
 
 # COMMAND ----------
 
@@ -70,17 +63,18 @@ display(bronzeQuarantinedDF)
 # COMMAND ----------
 
 # Step 2: Transform the Quarantined Records
-bronzeQuarTransDF = transform_bronze(bronzeQuarantinedDF, quarantine=True).alias("quarantine")
+bronzeQuarTransDF = transform_bronze(bronzeQuarantinedDF).alias("quarantine")
 display(bronzeQuarTransDF)
 
 # COMMAND ----------
 
-# Step 3: Repair Runtime Issue from the Quarantined DataFrame
-from pyspark.sql.functions import abs
+# Step 3: Fix runtime with absolute value of the original negative value
+from pyspark.sql.functions import abs, when
 
-silverCleanedDF = bronzeQuarTransDF.select(
+silverCleanedDF_1 = bronzeQuarTransDF.select(
+    "movie",
     col("movie.BackdropUrl"), 
-    col("movie.Budget"), 
+    col("movie.Budget").cast("Integer").alias("Budget"), 
     col("movie.CreatedBy"), 
     col("movie.CreatedDate").cast("date").alias("CreatedDate"), 
     col("movie.Id"), 
@@ -99,4 +93,32 @@ silverCleanedDF = bronzeQuarTransDF.select(
     col("movie.UpdatedDate").cast("date").alias("UpdatedDate"), 
     col("movie.genres")
 )
+display(silverCleanedDF_1)
+
+# COMMAND ----------
+
+# Step 4: Fix budget with 1000000 if original value is less than 1000000
+silverCleanedDF = silverCleanedDF_1.withColumn("Budget", when(col("Budget") < 1000000, 1000000)
+                           .when(col("Budget") >= 1000000, "Budget").otherwise(1000000))
+
+# COMMAND ----------
+
 display(silverCleanedDF)
+
+# COMMAND ----------
+
+# Step 5: Batch Write the Repaired (formerly Quarantined) Records to the Silver Table
+bronzeToSilverWriter = batch_writer(dataframe=silverCleanedDF, partition_column="UpdatedDate")
+bronzeToSilverWriter.save(silverPath)
+update_bronze_table_status(spark, bronzePath, silverCleanedDF, "loaded")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Display the Quarantined Records
+# MAGIC 
+# MAGIC If the update was successful, there should be no quarantined records in the Bronze table.
+
+# COMMAND ----------
+
+display(bronzeQuarantinedDF)

@@ -57,7 +57,6 @@ print("Assertion passed.")
 # COMMAND ----------
 
 # Step 3: Write Batch to a Bronze Table
-
 rawToBronzeWriter = batch_writer(dataframe=transformedRawDF, partition_column="p_ingestdate")
 rawToBronzeWriter.save(bronzePath)
 
@@ -80,10 +79,6 @@ dbutils.fs.rm(silverPath, recurse=True)
 
 # Load New Records from the Bronze Records
 bronzeDF = spark.read.table("movie_Bronze").filter("status = 'new'")
-
-# COMMAND ----------
-
-display(bronzeDF)
 
 # COMMAND ----------
 
@@ -164,7 +159,7 @@ silver_master_tracker.dropna(how="all").count()
 
 # Split the Silver DataFrame
 silver_master_tracker_clean = silver_master_tracker.filter("runtime >= 0" and "budget >= 1000000")
-silver_master_tracker_quarantine = silver_master_tracker.filter("budget < 1000000" or "runtime < 0" )
+silver_master_tracker_quarantine = silver_master_tracker.filter("budget < 1000000" or "runtime < 0")
 
 # COMMAND ----------
 
